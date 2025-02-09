@@ -23,36 +23,44 @@ module control (
     logic [31:0] bus_out;
     logic bus_out_en;
 
+    /* verilator lint_off UNUSEDSIGNAL */
+
     logic [6:0] opcode;
     logic [4:0] rd;
     logic [2:0] funct3;
     logic [4:0] rs1;
     logic [4:0] rs2;
-    // logic [6:0] funct7;
+    logic [6:0] funct7;
     logic [4:0] imm5;
     logic [6:0] imm7;
     logic [11:0] imm12;
-    // logic [19:0] imm20;
+    logic [19:0] imm20;
 
     assign opcode = ir[6:0];
     assign rd = ir[11:7];
     assign funct3 = ir[14:12];
     assign rs1 = ir[19:15];
     assign rs2 = ir[24:20];
-    // assign funct7 = ir[31:25];
+    assign funct7 = ir[31:25];
 
     assign imm5 = ir[11:7];
     assign imm7 = ir[31:25];
     assign imm12 = ir[31:20];
-    // assign imm20 = ir[31:12];
+    assign imm20 = ir[31:12];
 
     logic [31:0] imm_i;
     logic [31:0] imm_s;
+    logic [31:0] imm_b;
+    logic [31:0] imm_u;
+    logic [31:0] imm_j;
 
-    always_comb begin
-        imm_i = {(imm12[11]) ? {20{1'b1}} : '0, imm12};
-        imm_s = {(imm7[6]) ? {20{1'b1}} : '0, imm7, imm5};
-    end
+    assign imm_i = {{20{imm12[11]}}, imm12};
+    assign imm_s = {{20{imm7[6]}}, imm7, imm5};
+    assign imm_b = {{20{imm7[6]}}, imm5[0], imm7[5:0], imm5[4:1], 1'b0};
+    assign imm_u = {imm20, 12'b0};
+    assign imm_j = {{12{imm20[19]}}, imm20[7:0], imm20[8], imm20[18:9], 1'b0};
+
+    /* verilator lint_on UNUSEDSIGNAL */
 
     logic ir_load;
 
@@ -73,6 +81,7 @@ module control (
     end
 
     always_comb begin
+        ir_load = 0;
         bus_out = '0;
         bus_out_en = '0;
 
@@ -89,18 +98,67 @@ module control (
         alu_rd = '0;
         alu_op = '0;
 
-        ir_load = 0;
-
         if (counter == 1) begin
-            // PC -> AR
             pc_rd = '1;
             mem_load = '1;
         end
         if (counter == 2) begin
-            // MEM -> IR, PC++
             mem_rd = '1;
-            pc_inc = '1;
             ir_load = '1;
+        end
+
+        // ADDI, SLTI, ANDI, ORI, XORI, SLLI, SRLI, SRAI
+        if (opcode == 7'b0010011) begin
+            if (counter == 3) begin
+                bus_out = imm_i;
+                bus_out_en = '1;
+                alu_op = '0;
+                alu_wr = '1;
+            end
+            if (counter == 4) begin
+                reg_addr = rs1;
+                reg_rd = '1;
+                alu_op = {1'b1, funct3};
+                alu_wr = '1;
+            end
+            if (counter == 5) begin
+                alu_rd = '1;
+                reg_addr = rd;
+                reg_wr = '1;
+                pc_inc = '1;
+            end
+        end
+
+        // LUI
+        if (opcode == 7'b0110111) begin
+            if (counter == 3) begin
+                bus_out = imm_u;
+                bus_out_en = '1;
+                reg_addr = rd;
+                reg_wr = '1;
+                pc_inc = '1;
+            end
+        end
+
+        // AUIPC
+        if (opcode == 7'b0110111) begin
+            if (counter == 3) begin
+                bus_out = imm_u;
+                bus_out_en = '1;
+                alu_op = '0;
+                alu_wr = '1;
+            end
+            if (counter == 4) begin
+                pc_rd = '1;
+                alu_op = 4'b1000;
+                alu_wr = '1;
+            end
+            if (counter == 5) begin
+                alu_rd = '1;
+                reg_addr = rd;
+                reg_wr = '1;
+                pc_inc = '1;
+            end
         end
 
         // LW
@@ -125,6 +183,7 @@ module control (
                 reg_addr = rd;
                 reg_wr = '1;
                 mem_rd = '1;
+                pc_inc = '1;
             end
         end
 
@@ -150,6 +209,7 @@ module control (
                 reg_addr = rs2;
                 reg_rd = '1;
                 mem_wr = '1;
+                pc_inc = '1;
             end
         end
 
