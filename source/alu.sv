@@ -25,6 +25,13 @@ module alu (
             5'b10110: result = bus | acc;
             5'b10111: result = bus & acc;
 
+            5'b01000: result = {31'b0, bus == acc};
+            5'b01001: result = {31'b0, bus != acc};
+            5'b01100: result = {31'b0, bus < acc};
+            5'b01101: result = {31'b0, bus >= acc};
+            5'b01110: result = {31'b0, unsigned'(bus) < unsigned'(acc)};
+            5'b01111: result = {31'b0, unsigned'(bus) >= unsigned'(acc)};
+
             default: result = bus;
         endcase
     end

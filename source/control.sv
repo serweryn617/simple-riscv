@@ -18,6 +18,7 @@ module control (
 );
 
     logic [31:0] ir = 0;
+    logic cmp = 0;
     logic [7:0] counter = 0;
 
     logic [31:0] bus_out;
@@ -63,6 +64,7 @@ module control (
     /* verilator lint_on UNUSEDSIGNAL */
 
     logic ir_load;
+    logic cmp_load;
 
     always_ff @(negedge clk, posedge rst) begin
         if (rst) begin
@@ -78,10 +80,14 @@ module control (
         if (ir_load) begin
             ir <= bus;
         end
+        if (cmp_load) begin
+            cmp <= bus[0];
+        end
     end
 
     always_comb begin
         ir_load = 0;
+        cmp_load = 0;
         bus_out = '0;
         bus_out_en = '0;
 
@@ -150,7 +156,7 @@ module control (
             end
             if (counter == 4) begin
                 pc_rd = '1;
-                alu_op = 5'b00000;
+                alu_op = 5'b10000;
                 alu_wr = '1;
             end
             if (counter == 5) begin
@@ -180,6 +186,102 @@ module control (
                 reg_addr = rd;
                 reg_wr = '1;
                 pc_inc = '1;
+            end
+        end
+
+        // JAL
+        if (opcode == 7'b1101111) begin
+            if (counter == 3) begin
+                pc_rd = '1;
+                alu_op = '0;
+                alu_wr = '1;
+            end
+            if (counter == 4) begin
+                bus_out = imm_j;
+                bus_out_en = '1;
+                alu_op = 5'b10000;
+                alu_wr = '1;
+                pc_inc = '1;
+            end
+            if (counter == 5) begin
+                pc_rd = '1;
+                reg_addr = rd;
+                reg_wr = '1;
+            end
+            if (counter == 6) begin
+                alu_rd = '1;
+                pc_wr = '1;
+            end
+        end
+
+        // JALR
+        if (opcode == 7'b1100111) begin
+            if (counter == 3) begin
+                reg_addr = rs1;
+                reg_rd = '1;
+                alu_op = '0;
+                alu_wr = '1;
+            end
+            if (counter == 4) begin
+                bus_out = imm_i;
+                bus_out_en = '1;
+                alu_op = 5'b10000;
+                alu_wr = '1;
+                pc_inc = '1;
+            end
+            if (counter == 5) begin
+                pc_rd = '1;
+                reg_addr = rd;
+                reg_wr = '1;
+            end
+            if (counter == 6) begin
+                bus_out = 32'hFFFFFFFE;
+                bus_out_en = '1;
+                alu_op = 5'b10111;  // AND
+                alu_wr = '1;
+            end
+            if (counter == 7) begin
+                alu_rd = '1;
+                pc_wr = '1;
+            end
+        end
+
+        // BEQ, BNE, BLT, BGE, BLTU, BGEU
+        if (opcode == 7'b1100011) begin
+            if (counter == 3) begin
+                reg_addr = rs2;
+                reg_rd = '1;
+                alu_op = '0;
+                alu_wr = '1;
+            end
+            if (counter == 4) begin
+                reg_addr = rs1;
+                reg_rd = '1;
+                alu_op = {2'b01, funct3};
+                alu_wr = '1;
+            end
+            if (counter == 5) begin
+                alu_rd = '1;
+                cmp_load = '1;
+            end
+            if (counter == 6) begin
+                pc_rd = '1;
+                alu_op = '0;
+                alu_wr = '1;
+            end
+            if (counter == 7) begin
+                bus_out = imm_b;
+                bus_out_en = '1;
+                alu_op = 5'b10000;
+                alu_wr = '1;
+            end
+            if (counter == 8) begin
+                if (cmp) begin
+                    alu_rd = '1;
+                    pc_wr = '1;
+                end else begin
+                    pc_inc = '1;
+                end
             end
         end
 
