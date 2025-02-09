@@ -20,7 +20,7 @@ module cpu (
     logic [4:0] reg_addr;
     logic alu_wr;
     logic alu_rd;
-    logic [3:0] alu_op;
+    logic [4:0] alu_op;
 
     memory_controller mem_inst (
         .clk(clk),

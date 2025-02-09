@@ -14,7 +14,7 @@ module control (
     output logic [4:0] reg_addr,
     output logic alu_wr,
     output logic alu_rd,
-    output logic [3:0] alu_op
+    output logic [4:0] alu_op
 );
 
     logic [31:0] ir = 0;
@@ -107,7 +107,7 @@ module control (
             ir_load = '1;
         end
 
-        // ADDI, SLTI, ANDI, ORI, XORI, SLLI, SRLI, SRAI
+        // ADDI, SLTI, SLTIU, ANDI, ORI, XORI, SLLI, SRLI, SRAI
         if (opcode == 7'b0010011) begin
             if (counter == 3) begin
                 bus_out = imm_i;
@@ -118,7 +118,7 @@ module control (
             if (counter == 4) begin
                 reg_addr = rs1;
                 reg_rd = '1;
-                alu_op = {1'b1, funct3};
+                alu_op = {1'b1, (funct3[1:0] == 2'b01) ? funct7[5] : 1'b0, funct3};
                 alu_wr = '1;
             end
             if (counter == 5) begin
@@ -150,7 +150,29 @@ module control (
             end
             if (counter == 4) begin
                 pc_rd = '1;
-                alu_op = 4'b1000;
+                alu_op = 5'b00000;
+                alu_wr = '1;
+            end
+            if (counter == 5) begin
+                alu_rd = '1;
+                reg_addr = rd;
+                reg_wr = '1;
+                pc_inc = '1;
+            end
+        end
+
+        // ADD, SLT, SLTU, AND, OR, XOR, SLL, SRL, SUB, SRA
+        if (opcode == 7'b0010011) begin
+            if (counter == 3) begin
+                reg_addr = rs2;
+                reg_rd = '1;
+                alu_op = '0;
+                alu_wr = '1;
+            end
+            if (counter == 4) begin
+                reg_addr = rs1;
+                reg_rd = '1;
+                alu_op = {1'b1, funct7[5], funct3};
                 alu_wr = '1;
             end
             if (counter == 5) begin
@@ -172,7 +194,7 @@ module control (
             if (counter == 4) begin
                 reg_addr = rs1;
                 reg_rd = '1;
-                alu_op = 4'b1000;
+                alu_op = 5'b10000;
                 alu_wr = '1;
             end
             if (counter == 5) begin
@@ -198,7 +220,7 @@ module control (
             if (counter == 4) begin
                 reg_addr = rs1;
                 reg_rd = '1;
-                alu_op = 4'b1000;
+                alu_op = 5'b10000;
                 alu_wr = '1;
             end
             if (counter == 5) begin
