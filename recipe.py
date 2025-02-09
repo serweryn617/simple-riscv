@@ -16,6 +16,7 @@ files = [
     'register_pc.sv',
     'register.sv',
     'rom.sv',
+    'sign_extender.sv',
 ]
 
 fpga_machine = RemoteBuildServer(name='fpga_machine', build_path='~/simple-riscv')

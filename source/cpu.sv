@@ -21,6 +21,9 @@ module cpu (
     logic alu_wr;
     logic alu_rd;
     logic [4:0] alu_op;
+    logic ext_wr;
+    logic ext_rd;
+    logic [2:0] ext_op;
 
     memory_controller mem_inst (
         .clk(clk),
@@ -56,6 +59,14 @@ module cpu (
         .bus(bus)
     );
 
+    sign_extender ext_inst (
+        .clk(clk),
+        .wr(ext_wr),
+        .rd(ext_rd),
+        .op(ext_op),
+        .bus(bus)
+    );
+
     control ctrl_inst (
         .clk(clk),
         .rst(rst),
@@ -71,6 +82,9 @@ module cpu (
         .alu_wr(alu_wr),
         .alu_rd(alu_rd),
         .alu_op(alu_op),
+        .ext_wr(ext_wr),
+        .ext_rd(ext_rd),
+        .ext_op(ext_op),
         .bus(bus)
     );
 

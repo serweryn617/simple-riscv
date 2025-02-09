@@ -14,7 +14,10 @@ module control (
     output logic [4:0] reg_addr,
     output logic alu_wr,
     output logic alu_rd,
-    output logic [4:0] alu_op
+    output logic [4:0] alu_op,
+    output logic ext_wr,
+    output logic ext_rd,
+    output logic [2:0] ext_op
 );
 
     logic [31:0] ir = 0;
@@ -103,6 +106,9 @@ module control (
         alu_wr = '0;
         alu_rd = '0;
         alu_op = '0;
+        ext_wr = '0;
+        ext_rd = '0;
+        ext_op = '0;
 
         if (counter == 1) begin
             pc_rd = '1;
@@ -285,8 +291,8 @@ module control (
             end
         end
 
-        // LW
-        if (opcode == 7'b0000011 && funct3 == 3'b010) begin
+        // LW, LH, LB, LHU, LBU
+        if (opcode == 7'b0000011) begin
             if (counter == 3) begin
                 bus_out = imm_i;
                 bus_out_en = '1;
@@ -304,9 +310,14 @@ module control (
                 mem_load = '1;
             end
             if (counter == 6) begin
+                mem_rd = '1;
+                ext_wr = '1;
+            end
+            if (counter == 7) begin
+                ext_rd = '1;
+                ext_op = funct3;
                 reg_addr = rd;
                 reg_wr = '1;
-                mem_rd = '1;
                 pc_inc = '1;
             end
         end
